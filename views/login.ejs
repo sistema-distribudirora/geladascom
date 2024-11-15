@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Funcionário</title>    
+</head>
+<body>
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="funcionario_id">ID do Funcionário:</label>
+            <input type="text" id="funcionario_id" name="funcionario_id" required>
+        </div>
+        <div class="form-group">
+            <label for="senha">Senha:</label>
+            <input type="password" id="senha" name="senha" required>
+        </div>
+        <button type="button" class="btn-primary" onclick="realizarLogin()">Login</button>
+    </form>
+
+    <script>
+        async function realizarLogin() { 
+            const funcionario_id = document.getElementById('funcionario_id').value;
+            const senha = document.getElementById('senha').value;
+    
+            console.log("ID e senha enviados:", { funcionario_id, senha });
+    
+            if (!funcionario_id || isNaN(funcionario_id)) {
+                alert('Por favor, insira um ID de funcionário válido.');
+                return;
+            }
+    
+            try {
+                const resposta = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ funcionario_id, senha }),
+                });
+    
+                const resultado = await resposta.json();
+                console.log("Resposta do servidor:", resultado);
+    
+                if (resposta.status === 200) {
+                    window.location.href = `/index/${funcionario_id}`;
+                } else {
+                    alert(resultado.message);
+                }
+            } catch (error) {
+                console.error("Erro ao fazer login:", error);
+                alert("Erro ao conectar-se ao servidor.");
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+
+

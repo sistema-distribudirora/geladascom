@@ -12,7 +12,7 @@ const saltRounds = 10;
 const app = express();
 app.use(cors());
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'public/views'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -134,7 +134,6 @@ console.log("datas", datas);
         return res.status(500).json({ error: 'Erro ao registrar volta do almoço' });
     }
 });
-
 app.post('/ponto/saida', async (req, res) => {
     const { funcionario_id } = req.body;
     const dataAtualFormatada = new Date().toISOString().split('T')[0];
@@ -142,8 +141,90 @@ app.post('/ponto/saida', async (req, res) => {
     const horasExtras = '00:00:00';
 
     try {
+        // Consulta para verificar a quantidade de saídas já registradas no dia
+        const sqls = `
+            SELECT COUNT(*) AS totalSaidas 
+            FROM pontos 
+            WHERE funcionario_id = ? AND DATE(data) = ? AND saida IS NOT NULL`;
+        const [resultPonto] = await query(sqls, [funcionario_id, dataAtualFormatada]);
+
+        // Permitir no máximo 2 registros de saída por dia
+        if (resultPonto.totalSaidas >= 2) {
+            return res.status(400).json({ message: 'Já foram registradas duas saídas para hoje.' });
+        }
+
+        // Atualiza ou insere o registro de saída
+        const sql = `
+            UPDATE pontos 
+            SET saida = ?, horas_extras = ? 
+            WHERE funcionario_id = ? AND DATE(data) = ?`;
+        await query(sql, [
+            horaSaidaCompleta.toTimeString().slice(0, 8),
+            horasExtras,
+            funcionario_id,
+            dataAtualFormatada,
+        ]);
+
+        res.json({ message: 'Saída registrada com sucesso.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao registrar saída.' });
+    }
+});
+
+/*
+app.post('/ponto/saida', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtualFormatada = new Date().toISOString().split('T')[0];
+    const horaSaidaCompleta = new Date();
+    const horasExtras = '00:00:00';
+
+    try {
+        // Busca o último registro de ponto do funcionário no banco de dados
+        const sqlUltimoRegistro = `
+            SELECT * FROM pontos 
+            WHERE funcionario_id = ? 
+            ORDER BY data DESC, saida DESC 
+            LIMIT 1`;
+        const ultimoRegistro = await query(sqlUltimoRegistro, [funcionario_id]);
+
+        if (ultimoRegistro.length > 0) {
+            const ultimaSaida = ultimoRegistro[0].saida;
+            const ultimaData = ultimoRegistro[0].data;
+            const ultimaDataFormatada = new Date(ultimaData).toISOString().split('T')[0];
+
+            // Verifica se a saída já foi registrada para o mesmo turno
+            if (
+                ultimaDataFormatada === dataAtualFormatada &&
+                new Date(`1970-01-01T${ultimaSaida}`).getTime() > horaSaidaCompleta.getTime()
+            ) {
+                return res.status(400).json({ message: 'Já existe uma saída registrada para hoje no turno atual.' });
+            }
+        }
+
+        // Registra a nova saída no banco de dados
+        const sql = `
+            UPDATE pontos 
+            SET saida = ?, horas_extras = ? 
+            WHERE funcionario_id = ? AND DATE(data) = ?`;
+        await query(sql, [horaSaidaCompleta.toTimeString().slice(0, 8), horasExtras, funcionario_id, dataAtualFormatada]);
+
+        res.json({ message: 'Saída registrada com sucesso.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao registrar saída.' });
+    }
+});*/
+
+/*app.post('/ponto/saida', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtualFormatada = new Date().toISOString().split('T')[0];
+    const horaSaidaCompleta = new Date();
+    const horasExtras = '00:00:00';
+
+    try {
         const sqls = 'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ?';
-        const resultPonto = await query(sqls, [funcionario_id, dataAtualFormatada]);
+        const resultPonto = await query(sqls, [funcionario_id, horaSaidaCompleta]);
 
         if (resultPonto.length > 0) {
             return res.status(400).json({ message: 'Já existe uma entrada registrada para hoje.' });
@@ -158,7 +239,7 @@ app.post('/ponto/saida', async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Erro ao registrar saída' });
     }
-});
+});*/
 
 app.get('/relatorio', async (req, res) => {
     const { funcionario_id, data_inicio, data_fim } = req.query;
@@ -280,6 +361,48 @@ app.get('/funcionarios', async (req, res) => {
 app.post('/deletar-funcionario', (req, res) => {
     const { funcionario_id } = req.body;
 
+    if (!funcionario_id) 
+        return res.status(400).json({ message: 'ID do funcionário é obrigatório' });
+
+    const verificarFuncionarioSQL = 'SELECT * FROM funcionarios WHERE id = ?';
+    const deletePontosSQL = 'DELETE FROM pontos WHERE funcionario_id = ?';
+    const deleteFuncionarioSQL = 'DELETE FROM funcionarios WHERE id = ?';
+
+    // Verifica se o funcionário existe
+    db.query(verificarFuncionarioSQL, [funcionario_id], (err, results) => {
+        if (err) 
+            return res.status(500).send('Erro ao verificar funcionário');
+
+        if (results.length === 0) 
+            return res.status(404).json({ message: 'Funcionário não encontrado' });
+
+        // Verifica se o ID é 3107 e impede a exclusão
+        if (funcionario_id == 6) 
+            return res.status(403).json({ message: 'Administrador do sistema não pode ser excluído' });
+
+        // Exclui pontos associados ao funcionário
+        db.query(deletePontosSQL, [funcionario_id], (err) => {
+            if (err) 
+                return res.status(500).send('Erro ao excluir pontos');
+
+            // Exclui o funcionário
+            db.query(deleteFuncionarioSQL, [funcionario_id], (err, result) => {
+                if (err) 
+                    return res.status(500).send('Erro ao excluir funcionário');
+
+                if (result.affectedRows === 0) 
+                    return res.status(404).json({ message: 'Funcionário não encontrado para exclusão' });
+
+                res.redirect('/login');
+            });
+        });
+    });
+});
+
+/*
+app.post('/deletar-funcionario', (req, res) => {
+    const { funcionario_id } = req.body;
+
     if (!funcionario_id) return res.status(400).json({ message: 'ID do funcionário é obrigatório' });
 
     const deletePontosSQL = 'DELETE FROM pontos WHERE funcionario_id = ?';
@@ -294,7 +417,7 @@ app.post('/deletar-funcionario', (req, res) => {
             res.redirect('/login');
         });
     });
-});
+});*/
 
 app.get('/login', (req, res) => {
     res.render('login');

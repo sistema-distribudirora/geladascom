@@ -32,7 +32,8 @@ const db = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    port: process.env.DB_PORT || 3306
+    port: process.env.DB_PORT || 3306,
+    timezone: '-03:00',
 });
 
 // Função de consulta que retorna uma Promise
@@ -59,9 +60,15 @@ app.get('/', verificarAutenticacao, async (req, res) => {
     }
 });
 
+const adjustToBrasiliaTime = (date) => {
+    // Converte o horário UTC para o horário de Brasília (GMT-3)
+    const brDate = new Date(date.getTime() - 3 * 3600000);
+    return brDate;
+};
+
 app.post('/ponto/entrada', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtual = new Date();
+    const dataAtual = adjustToBrasiliaTime(new Date());
     const horaEntrada = dataAtual.toTimeString().slice(0, 8);
 
     try {
@@ -72,6 +79,7 @@ app.post('/ponto/entrada', async (req, res) => {
             return res.status(400).json({ message: 'Já existe uma entrada registrada para hoje.' });
         }
 
+        // Ajusta data para o próximo dia se a hora for após 22h
         if (dataAtual.getHours() >= 22) {
             dataAtual.setDate(dataAtual.getDate() + 1);
         }
@@ -88,20 +96,21 @@ app.post('/ponto/entrada', async (req, res) => {
 
 app.post('/ponto/saida-almoco', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtual = new Date();
+    const dataAtual = adjustToBrasiliaTime(new Date());
     const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
     const horaSaidaAlmoco = dataAtual.toTimeString().slice(0, 8);
+
     try {
-        const sqlal = 'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ? AND saida_almoco IS NOT NULL'
+        const sqlal = 'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ? AND saida_almoco IS NOT NULL';
         const result = await query(sqlal, [funcionario_id, dataAtualFormatada]);
-        
+
         if (result.length > 0) {
             return res.status(400).json({ message: 'Já existe uma saída para o almoço registrada para hoje.' });
         }
 
         const sql = 'UPDATE pontos SET saida_almoco = ? WHERE funcionario_id = ? AND DATE(data) = ?';
-const datas = await query(sql, [horaSaidaAlmoco, funcionario_id, dataAtualFormatada]);
-console.log("datas", datas);
+        await query(sql, [horaSaidaAlmoco, funcionario_id, dataAtualFormatada]);
+
         return res.status(200).json({ message: 'Ponto de saída para o almoço registrado com sucesso!' });
     } catch (err) {
         console.error('Erro ao registrar saída para o almoço:', err);
@@ -111,7 +120,7 @@ console.log("datas", datas);
 
 app.post('/ponto/volta-almoco', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtual = new Date();
+    const dataAtual = adjustToBrasiliaTime(new Date());
     const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
     const horaVoltaAlmoco = dataAtual.toTimeString().slice(0, 8);
 
@@ -126,44 +135,38 @@ app.post('/ponto/volta-almoco', async (req, res) => {
         }
 
         const sql = 'UPDATE pontos SET volta_almoco = ? WHERE funcionario_id = ? AND DATE(data) = ?';
-const datas = await query(sql, [horaVoltaAlmoco, funcionario_id, dataAtualFormatada]);
-console.log("datas", datas);
+        await query(sql, [horaVoltaAlmoco, funcionario_id, dataAtualFormatada]);
+
         return res.status(200).json({ message: 'Ponto de volta do almoço registrado com sucesso!' });
     } catch (err) {
         console.error('Erro ao registrar volta do almoço:', err);
         return res.status(500).json({ error: 'Erro ao registrar volta do almoço' });
     }
 });
+
 app.post('/ponto/saida', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtualFormatada = new Date().toISOString().split('T')[0];
-    const horaSaidaCompleta = new Date();
+    const dataAtual = adjustToBrasiliaTime(new Date());
+    const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
+    const horaSaidaCompleta = dataAtual.toTimeString().slice(0, 8);
     const horasExtras = '00:00:00';
 
     try {
-        // Consulta para verificar a quantidade de saídas já registradas no dia
         const sqls = `
             SELECT COUNT(*) AS totalSaidas 
             FROM pontos 
             WHERE funcionario_id = ? AND DATE(data) = ? AND saida IS NOT NULL`;
         const [resultPonto] = await query(sqls, [funcionario_id, dataAtualFormatada]);
 
-        // Permitir no máximo 2 registros de saída por dia
         if (resultPonto.totalSaidas >= 2) {
             return res.status(400).json({ message: 'Já foram registradas duas saídas para hoje.' });
         }
 
-        // Atualiza ou insere o registro de saída
         const sql = `
             UPDATE pontos 
             SET saida = ?, horas_extras = ? 
             WHERE funcionario_id = ? AND DATE(data) = ?`;
-        await query(sql, [
-            horaSaidaCompleta.toTimeString().slice(0, 8),
-            horasExtras,
-            funcionario_id,
-            dataAtualFormatada,
-        ]);
+        await query(sql, [horaSaidaCompleta, horasExtras, funcionario_id, dataAtualFormatada]);
 
         res.json({ message: 'Saída registrada com sucesso.' });
     } catch (err) {
@@ -171,6 +174,7 @@ app.post('/ponto/saida', async (req, res) => {
         res.status(500).json({ error: 'Erro ao registrar saída.' });
     }
 });
+
 
 /*
 app.post('/ponto/saida', async (req, res) => {

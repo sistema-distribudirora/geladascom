@@ -147,15 +147,14 @@
              </div>
  
              <div class="buttons">
-                 <button type="button" class="btn-primary" onclick="baterPonto('entrada')">Bater Entrada</button>
-                 <button type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para Almoço</button>
-                 <button type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta do Almoço</button>
-                 <button type="button" class="btn-primary" onclick="baterPonto('saida')">Bater Saída</button>
+                 <button id="logoutButton" type="button" class="btn-primary" onclick="baterPonto('entrada')">Bater Entrada</button>
+                 <button id="logoutButton" type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para Almoço</button>
+                 <button id="logoutButton" type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta do Almoço</button>
+                 <button id="logoutButton" type="button" class="btn-primary" onclick="baterPonto('saida')">Bater Saída</button>
              </div>
          </form><br><br>
          <div id="loginDiv">
-            <button class="bold" type="button" onclick="verificar()">Acesso Restrito</button><br><br>
-            <button id="logoutButton" style="background-color: #DC3545; color: white;">Sair</button>
+            <button class="bold" type="button" onclick="verificar()">Acesso Restrito</button><br><br>            
             <div id="conteudoProteted" style="display:none;">
             <form id="loginForm">
                 <div class="form-group">
@@ -884,6 +883,11 @@
         
         // Chama a função ao carregar a página
         window.onload = buscarFuncionarios;
+document.getElementById('logoutButton').addEventListener('click', () => {
+            setTimeout(() => {
+                window.location.href = '/logout';
+            }, 3000); // 3000 ms = 3 segundos        
+        });
      </script>
  </body>
  </html>

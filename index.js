@@ -32,8 +32,7 @@ const db = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    port: process.env.DB_PORT || 3306,
-    timezone: '-03:00',
+    port: process.env.DB_PORT || 3306
 });
 
 // Função de consulta que retorna uma Promise
@@ -59,7 +58,120 @@ app.get('/', verificarAutenticacao, async (req, res) => {
         return res.status(500).send('Erro ao buscar funcionários');
     }
 });
+/*
+app.post('/ponto/entrada', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtual = new Date();
+    const horaEntrada = dataAtual.toTimeString().slice(0, 8);
 
+    try {
+        const sqls = 'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ?';
+        const resultPonto = await query(sqls, [funcionario_id, dataAtual.toISOString().slice(0, 10)]);
+
+        if (resultPonto.length > 0) {
+            return res.status(400).json({ message: 'Já existe uma entrada registrada para hoje.' });
+        }
+
+        if (dataAtual.getHours() >= 22) {
+            dataAtual.setDate(dataAtual.getDate() + 1);
+        }
+
+        const sql = 'INSERT INTO pontos (funcionario_id, entrada, data) VALUES (?, ?, ?)';
+        await query(sql, [funcionario_id, horaEntrada, dataAtual]);
+
+        return res.status(200).json({ message: 'Entrada registrada com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao registrar entrada:', err);
+        return res.status(500).json({ error: 'Erro ao registrar entrada' });
+    }
+});
+
+app.post('/ponto/saida-almoco', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtual = new Date();
+    const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
+    const horaSaidaAlmoco = dataAtual.toTimeString().slice(0, 8);
+    try {
+        const sqlal = 'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ? AND saida_almoco IS NOT NULL'
+        const result = await query(sqlal, [funcionario_id, dataAtualFormatada]);
+        
+        if (result.length > 0) {
+            return res.status(400).json({ message: 'Já existe uma saída para o almoço registrada para hoje.' });
+        }
+
+        const sql = 'UPDATE pontos SET saida_almoco = ? WHERE funcionario_id = ? AND DATE(data) = ?';
+const datas = await query(sql, [horaSaidaAlmoco, funcionario_id, dataAtualFormatada]);
+console.log("datas", datas);
+        return res.status(200).json({ message: 'Ponto de saída para o almoço registrado com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao registrar saída para o almoço:', err);
+        return res.status(500).json({ error: 'Erro ao registrar saída para o almoço' });
+    }
+});
+
+app.post('/ponto/volta-almoco', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtual = new Date();
+    const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
+    const horaVoltaAlmoco = dataAtual.toTimeString().slice(0, 8);
+
+    try {
+        const result = await query(
+            'SELECT * FROM pontos WHERE funcionario_id = ? AND DATE(data) = ? AND volta_almoco IS NOT NULL',
+            [funcionario_id, dataAtualFormatada]
+        );
+
+        if (result.length > 0) {
+            return res.status(400).json({ message: 'Já existe uma volta do almoço registrada para hoje.' });
+        }
+
+        const sql = 'UPDATE pontos SET volta_almoco = ? WHERE funcionario_id = ? AND DATE(data) = ?';
+const datas = await query(sql, [horaVoltaAlmoco, funcionario_id, dataAtualFormatada]);
+console.log("datas", datas);
+        return res.status(200).json({ message: 'Ponto de volta do almoço registrado com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao registrar volta do almoço:', err);
+        return res.status(500).json({ error: 'Erro ao registrar volta do almoço' });
+    }
+});
+app.post('/ponto/saida', async (req, res) => {
+    const { funcionario_id } = req.body;
+    const dataAtualFormatada = new Date().toISOString().split('T')[0];
+    const horaSaidaCompleta = new Date();
+    const horasExtras = '00:00:00';
+
+    try {
+        // Consulta para verificar a quantidade de saídas já registradas no dia
+        const sqls = `
+            SELECT COUNT(*) AS totalSaidas 
+            FROM pontos 
+            WHERE funcionario_id = ? AND DATE(data) = ? AND saida IS NOT NULL`;
+        const [resultPonto] = await query(sqls, [funcionario_id, dataAtualFormatada]);
+
+        // Permitir no máximo 2 registros de saída por dia
+        if (resultPonto.totalSaidas >= 2) {
+            return res.status(400).json({ message: 'Já foram registradas duas saídas para hoje.' });
+        }
+
+        // Atualiza ou insere o registro de saída
+        const sql = `
+            UPDATE pontos 
+            SET saida = ?, horas_extras = ? 
+            WHERE funcionario_id = ? AND DATE(data) = ?`;
+        await query(sql, [
+            horaSaidaCompleta.toTimeString().slice(0, 8),
+            horasExtras,
+            funcionario_id,
+            dataAtualFormatada,
+        ]);
+
+        res.json({ message: 'Saída registrada com sucesso.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao registrar saída.' });
+    }
+});
+*/
 const adjustToBrasiliaTime = (date) => {
     // Converte o horário UTC para o horário de Brasília (GMT-3)
     const brDate = new Date(date.getTime() - 3 * 3600000);
@@ -174,7 +286,6 @@ app.post('/ponto/saida', async (req, res) => {
         res.status(500).json({ error: 'Erro ao registrar saída.' });
     }
 });
-
 
 /*
 app.post('/ponto/saida', async (req, res) => {
@@ -338,8 +449,8 @@ app.post('/funcionarios/cadastrar', async (req, res) => {
 
             // Inserindo o nome, email e o hash da senha no banco de dados
             const sql = 'INSERT INTO funcionarios (nome, email, senha) VALUES (?, ?, ?)';
-            await query(sql, [nome, email, hash]); // Salvando o hash no banco
-
+            const data = await query(sql, [nome, email, hash]); // Salvando o hash no banco
+           console.log("data", data);
             res.redirect('/');
         });
     } catch (err) {
@@ -471,8 +582,23 @@ function verificarAutenticacao(req, res, next) {
 
 // Rota protegida para o ponto (index)
 app.get('/index/:funcionario_id', verificarAutenticacao, (req, res) => {
+    const funcionarioId = req.params.funcionario_id; // ID do funcionário logado
+    const sql = 'SELECT * FROM funcionarios';
+
+    db.query(sql, (error, results) => {
+        if (error) {
+            console.error('Erro ao buscar funcionários:', error);
+            return res.status(500).send('Erro ao buscar funcionários');
+        }
+
+        // Renderize o EJS com todos os funcionários e o ID do funcionário logado
+        res.render('index', { funcionarios: results, funcionarioLogado: funcionarioId });
+    });
+});
+
+/*app.get('/index/:funcionario_id', verificarAutenticacao, (req, res) => {
     const funcionarioId = req.params.funcionario_id;
-    const sql = 'SELECT * FROM funcionarios WHERE id = ?';
+    const sql = 'SELECT * FROM funcionarios';
 
     db.query(sql, [funcionarioId], (error, results) => {
         console.log("resultado", results);
@@ -482,9 +608,22 @@ app.get('/index/:funcionario_id', verificarAutenticacao, (req, res) => {
         }
 
         res.render('index', { funcionarios: results, funcionarioLogado: funcionarioId });
+        
     });
-});
+});*/
+app.get('/buscar', async (req, res) => {
+    const sql = 'SELECT id, nome FROM funcionarios';
 
+    try {
+        const funcionarios = await query(sql); // Executa a consulta no banco de dados
+        console.log("resultado funcionarios", funcionarios);
+
+        res.json(funcionarios); // Retorna os dados como JSON para o frontend
+    } catch (error) {
+        console.error('Erro ao buscar funcionários:', error);
+        res.status(500).send('Erro ao buscar funcionários');
+    }
+});
 
 // Rota para verificar uma senha específica para autenticação adicional
 app.post('/verificar-senha', (req, res) => {

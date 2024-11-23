@@ -120,6 +120,11 @@
             background-color: #DC3545;
             color: #f0f0f0;
          }
+         .lista{            
+            text-align: left;
+            width: 60%;
+            margin: auto;
+         }
      </style>
  </head>
  <body>
@@ -132,16 +137,19 @@
              <div class="form-group">
                  <label for="funcionario_id">Selecione Seu Nome:</label>
                  <select name="funcionario_id" id="funcionario_id" disabled style="color: black; font-weight: bold;">
-                     <% funcionarios.forEach(funcionario => { %>
-                         <option value="<%= funcionario.id %>"><%= funcionario.nome %></option>
-                     <% }) %>
-                 </select>
+                    <% funcionarios.forEach(funcionario => { %>
+                        <option value="<%= funcionario.id %>" 
+                            <%= funcionario.id == funcionarioLogado ? 'selected' : '' %>>
+                            <%= funcionario.nome %>
+                        </option>
+                    <% }) %>
+                </select>
              </div>
  
              <div class="buttons">
                  <button type="button" class="btn-primary" onclick="baterPonto('entrada')">Bater Entrada</button>
-                 <button type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para janta</button>
-                 <button type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta da janta</button>
+                 <button type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para Almoço</button>
+                 <button type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta do Almoço</button>
                  <button type="button" class="btn-primary" onclick="baterPonto('saida')">Bater Saída</button>
              </div>
          </form><br><br>
@@ -173,7 +181,7 @@
              </div>
              <button type="button" class="btn-success" onclick="cadastrarFuncionario()">Cadastrar</button>
          </form>
-            
+         
          <h2>Gerar Relatório de Horas Trabalhadas</h2>
 <form id="relatorioForm">
     <div class="form-group">
@@ -195,7 +203,7 @@
     <button type="button" class="btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
     <button onclick="exportarRelatorioParaCSV()">Exportar para CSV</button>
 
-    <button type="button" class="btn-secondary" onclick="exportarRelatorio()">Exportar Relatório</button>
+    <div type="button" class="btn-secondary" onclick="exportarRelatorio()"></div>
 </form>
 
 <h3>Relatório</h3>
@@ -265,6 +273,25 @@
         </select>
         <button type="submit">Excluir Funcionário</button>
     </form>
+    <div class="lista"
+    <h1>Funcionários Listados</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nome</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% funcionarios.forEach(funcionario => { %>
+                <tr>
+                    <td><%= funcionario.id %></td>
+                    <td><%= funcionario.nome %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table> 
+    </div>
 </div>
     
      <script>
@@ -682,6 +709,7 @@
             .then(response => response.text())
              .then(result => showMessage(result.message))
              .catch(error => showMessage(error.message, 'error'));
+             alert("Funcionario cadastrado com sucesso");
              window.location.reload();
         }
          
@@ -829,6 +857,33 @@
                 });
             }
         });*/
+        async function buscarFuncionarios() {
+            try {
+                const response = await fetch('/buscar'); // Faz a requisição para a rota '/buscar'
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar os funcionários');
+                }
+                const funcionarioslista = await response.json(); // Converte a resposta para JSON
+                
+                // Seleciona o elemento <ul> onde os funcionários serão listados
+                const lista = document.getElementById('funcionarios-list');
+                
+                // Limpa a lista antes de adicionar os novos itens
+                lista.innerHTML = '';
+        
+                // Verifique se "funcionarios" tem a estrutura correta
+                funcionarioslista.forEach(funcionario1 => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${funcionario1.id}: ${funcionario1.nome}`;
+                    lista.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error(error);                
+            }
+        }
+        
+        // Chama a função ao carregar a página
+        window.onload = buscarFuncionarios;
      </script>
  </body>
  </html>

@@ -148,9 +148,9 @@
  
              <div class="buttons">
                  <button id="logoutButton" type="button" class="btn-primary" onclick="baterPonto('entrada')">Bater Entrada</button>
-                 <button id="logoutButton" type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para Almoço</button>
-                 <button id="logoutButton" type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta do Almoço</button>
-                 <button id="logoutButton" type="button" class="btn-primary" onclick="baterPonto('saida')">Bater Saída</button>
+                 <button id="logoutButton1" type="button" class="btn-secondary" onclick="baterPonto('saida-almoco')">Saída para Almoço</button>
+                 <button id="logoutButton2" type="button" class="btn-secondary" onclick="baterPonto('volta-almoco')">Volta do Almoço</button>
+                 <button id="logoutButton3" type="button" class="btn-primary" onclick="baterPonto('saida')">Bater Saída</button>
              </div>
          </form><br><br>
          <div id="loginDiv">
@@ -884,6 +884,21 @@
         // Chama a função ao carregar a página
         window.onload = buscarFuncionarios;
 document.getElementById('logoutButton').addEventListener('click', () => {
+            setTimeout(() => {
+                window.location.href = '/logout';
+            }, 8000); // 3000 ms = 3 segundos        
+        });
+document.getElementById('logoutButton1').addEventListener('click', () => {
+            setTimeout(() => {
+                window.location.href = '/logout';
+            }, 8000); // 3000 ms = 3 segundos        
+        });
+document.getElementById('logoutButton2').addEventListener('click', () => {
+            setTimeout(() => {
+                window.location.href = '/logout';
+            }, 8000); // 3000 ms = 3 segundos        
+        });
+document.getElementById('logoutButton3').addEventListener('click', () => {
             setTimeout(() => {
                 window.location.href = '/logout';
             }, 8000); // 3000 ms = 3 segundos        

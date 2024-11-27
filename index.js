@@ -258,17 +258,22 @@ app.post('/ponto/volta-almoco', async (req, res) => {
 
 app.post('/ponto/saida', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtual = adjustToBrasiliaTime(new Date());
-    const dataAtualFormatada = dataAtual.toISOString().slice(0, 10);
-    const horaSaidaCompleta = dataAtual.toTimeString().slice(0, 8);
+    const dataAtual = adjustToBrasiliaTime(new Date()); // Hora ajustada para o fuso horário de Brasília
+    let dataSaida = dataAtual.toISOString().slice(0, 10);  // Inicialmente, data do dia atual
+    const horaSaidaCompleta = dataAtual.toTimeString().slice(0, 8); // Hora da saída
     const horasExtras = '00:00:00';
+
+    // Verifica se a hora atual é após a meia-noite (00:00)
+    if (dataAtual.getHours() === 0 && dataAtual.getMinutes() === 0) {
+        dataSaida = new Date(dataAtual.setDate(dataAtual.getDate() - 1)).toISOString().slice(0, 10);  // Ajusta para o dia anterior
+    }
 
     try {
         const sqls = `
             SELECT COUNT(*) AS totalSaidas 
             FROM pontos 
             WHERE funcionario_id = ? AND DATE(data) = ? AND saida IS NOT NULL`;
-        const [resultPonto] = await query(sqls, [funcionario_id, dataAtualFormatada]);
+        const [resultPonto] = await query(sqls, [funcionario_id, dataSaida]);
 
         if (resultPonto.totalSaidas >= 2) {
             return res.status(400).json({ message: 'Já foram registradas duas saídas para hoje.' });
@@ -278,7 +283,7 @@ app.post('/ponto/saida', async (req, res) => {
             UPDATE pontos 
             SET saida = ?, horas_extras = ? 
             WHERE funcionario_id = ? AND DATE(data) = ?`;
-        await query(sql, [horaSaidaCompleta, horasExtras, funcionario_id, dataAtualFormatada]);
+        await query(sql, [horaSaidaCompleta, horasExtras, funcionario_id, dataSaida]);
 
         res.json({ message: 'Saída registrada com sucesso.' });
     } catch (err) {
@@ -286,6 +291,7 @@ app.post('/ponto/saida', async (req, res) => {
         res.status(500).json({ error: 'Erro ao registrar saída.' });
     }
 });
+
 
 /*
 app.post('/ponto/saida', async (req, res) => {

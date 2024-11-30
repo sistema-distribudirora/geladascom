@@ -258,39 +258,40 @@ app.post('/ponto/volta-almoco', async (req, res) => {
 
 app.post('/ponto/saida', async (req, res) => {
     const { funcionario_id } = req.body;
-    const dataAtual = adjustToBrasiliaTime(new Date()); // Hora ajustada para o fuso horário de Brasília
-    let dataSaida = dataAtual.toISOString().slice(0, 10);  // Inicialmente, data do dia atual
-    const horaSaidaCompleta = dataAtual.toTimeString().slice(0, 8); // Hora da saída
-    const horasExtras = '00:00:00';
-
-    // Verifica se a hora atual é após a meia-noite (00:00)
-    if (dataAtual.getHours() === 0 && dataAtual.getMinutes() === 0) {
-        dataSaida = new Date(dataAtual.setDate(dataAtual.getDate() - 1)).toISOString().slice(0, 10);  // Ajusta para o dia anterior
-    }
+    const dataAtual = adjustToBrasiliaTime(new Date()); // Ajusta para o horário de Brasília
+    const horaSaidaCompleta = dataAtual.toTimeString().slice(0, 8); // Hora de saída
 
     try {
-        const sqls = `
-            SELECT COUNT(*) AS totalSaidas 
-            FROM pontos 
-            WHERE funcionario_id = ? AND DATE(data) = ? AND saida IS NOT NULL`;
-        const [resultPonto] = await query(sqls, [funcionario_id, dataSaida]);
+        // Identifica o registro de entrada mais recente para o funcionário
+        const sqlUltimaEntrada = `
+            SELECT id, DATE(data) AS dataEntrada
+            FROM pontos
+            WHERE funcionario_id = ? AND saida IS NULL
+            ORDER BY data DESC
+            LIMIT 1`;
+        const [ultimaEntrada] = await query(sqlUltimaEntrada, [funcionario_id]);
 
-        if (resultPonto.totalSaidas >= 2) {
-            return res.status(400).json({ message: 'Já foram registradas duas saídas para hoje.' });
+        if (!ultimaEntrada) {
+            return res.status(400).json({ message: 'Nenhum registro de entrada encontrado para este funcionário.' });
         }
 
-        const sql = `
+        // Ajusta a data para o dia da última entrada
+        const dataEntrada = ultimaEntrada.dataEntrada;
+
+        // Atualiza o registro com a hora de saída
+        const sqlAtualizaSaida = `
             UPDATE pontos 
             SET saida = ?, horas_extras = ? 
-            WHERE funcionario_id = ? AND DATE(data) = ?`;
-        await query(sql, [horaSaidaCompleta, horasExtras, funcionario_id, dataSaida]);
+            WHERE id = ?`;
+        await query(sqlAtualizaSaida, [horaSaidaCompleta, '00:00:00', ultimaEntrada.id]);
 
-        res.json({ message: 'Saída registrada com sucesso.' });
+        return res.json({ message: 'Saída registrada com sucesso.' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erro ao registrar saída.' });
+        console.error('Erro ao registrar saída:', err);
+        return res.status(500).json({ error: 'Erro ao registrar saída.' });
     }
 });
+
 
 
 /*

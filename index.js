@@ -272,7 +272,7 @@ app.post('/ponto/saida', async (req, res) => {
         const [ultimaEntrada] = await query(sqlUltimaEntrada, [funcionario_id]);
 
         if (!ultimaEntrada) {
-            return res.status(400).json({ message: 'Nenhum registro de entrada encontrado para este funcionário.' });
+            return res.status(400).json({ message: 'Saída já registrada para hoje.' });
         }
 
         // Ajusta a data para o dia da última entrada

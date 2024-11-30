@@ -366,12 +366,12 @@ app.post('/ponto/saida', async (req, res) => {
 app.get('/relatorio', async (req, res) => {
     const { funcionario_id, data_inicio, data_fim } = req.query;
     const sql = `
-        SELECT 
+         SELECT 
             data, 
-            entrada, 
-            saida_almoco, 
-            volta_almoco, 
-            saida
+            COALESCE(entrada, 'N/A') AS entrada, 
+            COALESCE(saida_almoco, 'N/A') AS saida_almoco, 
+            COALESCE(volta_almoco, 'N/A') AS volta_almoco, 
+            COALESCE(saida, 'N/A') AS saida
         FROM pontos 
         WHERE funcionario_id = ? AND data BETWEEN ? AND ?
     `;
